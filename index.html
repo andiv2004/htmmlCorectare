@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autocorectare a Examenelor de Admitere-produs dezvoltat de DTDA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body { display: flex; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        .sidebar { width: 240px; background-color: #ffffff; padding: 20px; min-height: 350px; box-shadow: 2px 0 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; border-right: 1px solid #e0e0e0; }
+        .sidebar h2 { color: #0056b3; margin-top: 0; font-size: 1.5em; border-bottom: 2px solid #0056b3; padding-bottom: 10px;}
+        .sidebar .mode-toggle button { width: 100%; text-align: left; background: none; font-size: 1em; cursor: pointer; text-decoration: none; color: #333; font-weight: 500; display: block; padding: 10px 15px; border-radius: 5px; transition: background-color 0.3s, color 0.3s; border: 1px solid transparent; margin-bottom: 8px; }
+        .sidebar .mode-toggle button:hover { background-color: #e9f5ff; color: #007bff; }
+        .sidebar .mode-toggle button.active-mode { background-color: #007bff; color: white; font-weight: bold; border-color: #0056b3; }
+        .main-content { flex-grow: 1; padding: 25px; overflow-y: auto; max-height: 100vh; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .container { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h1 { font-size: 1.8em; color: #0056b3; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom:10px;}
+        h2 { font-size: 1.5em; color: #0067cc; margin-top: 25px; margin-bottom: 15px; }
+        h3 { font-size: 1.2em; color: #333; margin-bottom: 10px; }
+        form { margin-bottom: 20px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #fdfdfd; }
+        label { display: block; margin-bottom: 8px; font-weight: 600;}
+        input[type="file"], input[type="text"], select, textarea { padding: 10px 12px; margin-bottom:15px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: calc(100% - 26px); box-sizing: border-box; }
+        textarea { min-height: 100px; font-family: monospace; white-space: pre; }
+        button, .button-like { padding: 10px 18px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; font-size: 1rem; margin-right: 10px; }
+        button:hover, .button-like:hover { background-color: #0056b3; }
+        .button-like { display: inline-block; text-decoration: none; text-align: center;}
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #545b62; }
+        button.danger { background-color: #dc3545; }
+        button.danger:hover { background-color: #c82333; }
+        button.success { background-color: #28a745; }
+        button.success:hover { background-color: #1e7e34; }
+        .flash-messages { list-style-type: none; padding: 0; margin-bottom: 20px; }
+        .flash-messages li { padding: 12px 18px; margin: 8px 0; border-radius: 5px; font-weight: 500; border: 1px solid transparent; }
+        .flash-messages li.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .flash-messages li.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .flash-messages li.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .flash-messages li.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .analysis-results { margin-top: 25px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
+        .analysis-results h3.expandable-header { cursor: pointer; color: #0056b3; display:inline-block; margin-right: 5px;}
+        .analysis-results h3.expandable-header::after { content: ' [+]'; font-size: 0.8em; }
+        .analysis-results h3.expandable-header.expanded::after { content: ' [-]'; }
+        .analysis-results table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
+        .analysis-results th, .analysis-results td { padding: 10px 12px; border: 1px solid #ccc; text-align: left; vertical-align: top;}
+        .analysis-results th { background-color: #e9ecef; font-weight: 600; }
+        .analysis-results tr:nth-child(even) { background-color: #f8f9fa; }
+        .analysis-results tr:hover { background-color: #e2e6ea; }
+        .annotated-image { max-width: 100%; height: auto; display: block; margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .submission-section { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f0f8ff; }
+        .submission-status { margin-top: 10px; font-weight: bold; padding: 8px; border-radius: 4px;}
+        .submission-status.success { color: #155724; background-color: #d4edda; }
+        .submission-status.warning { color: #856404; background-color: #fff3cd; }
+        .submission-status.error { color: #721c24; background-color: #f8d7da; }
+        .drive-link { color: #007bff; text-decoration: none; font-weight:500; }
+        .drive-link:hover { text-decoration: underline; }
+        .grade-container { display: flex; align-items: center; margin-bottom: 20px; flex-wrap: wrap;}
+        .grade-container h3 { margin-right: 20px; margin-bottom: 0; white-space: nowrap;}
+        .grade-container button { margin-top:0; }
+        .batch-results table { font-size: 0.85em; }
+        .batch-results th, .batch-results td { padding: 8px 10px; }
+        .batch-verification-buttons { margin-top: 25px; text-align: center; padding-top:15px; border-top: 1px solid #eee;}
+        .batch-verification-buttons button { margin: 0 10px; padding: 10px 20px; }
+        .verificare-section { margin-top: auto; padding: 15px; border-top: 1px solid #ddd; background-color: #f8f9fa;}
+        .verificare-section h3 { font-size: 1.1em; margin-bottom: 8px; color: #333;}
+        #verificare_status_container { margin-bottom: 10px; padding: 8px; border-radius: 4px; font-size: 0.9em;}
+        #verificare_status_container.enabled { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724;}
+        #verificare_status_container.disabled { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;}
+        #verificare_status { font-weight: bold; }
+        #verificare_description { margin-top: 5px; font-style: italic; color: #555; font-size: 0.85em;}
+        #toggle_verificare_btn { width:100%; font-size: 0.9em; padding: 8px 10px; }
+        .step-info { background-color: #e9f5ff; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #cce0ff;}
+        .step-info p { margin: 5px 0; color: #004085;}
+        #batchProgressContainer { background-color: #e9f5ff; border: 1px solid #cce0ff; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        #batchProgressContainer h3 { color: #004085; margin-top:0; }
+        #batchProgressBar { width: 100%; height: 25px; border-radius: 5px; margin-bottom: 10px; appearance: none; }
+        #batchProgressBar::-webkit-progress-bar { background-color: #eee; border-radius: 5px; }
+        #batchProgressBar::-webkit-progress-value { background-color: #007bff; border-radius: 5px; transition: width 0.3s ease-in-out; }
+        #batchProgressBar::-moz-progress-bar { background-color: #007bff; border-radius: 5px; }
+        #batchFailedFilesContainer { margin-top: 15px; }
+        #batchFailedFilesList { list-style-type: disc; color: #dc3545; padding-left: 20px; }
+        #batchFailedFilesList li { margin-bottom: 5px; }
+        .answer-pair { display: inline-block; padding: 3px 8px; margin: 3px; background-color: #e9ecef; border-radius: 4px; font-family: monospace; font-size: 0.95em; border: 1px solid #dee2e6;}
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Autocorectare - DTDA</h2>
+        <div class="mode-toggle">
+            <button id="showSingleScanMode" onclick="window.location.href='{{ url_for('main_route', mode='single') }}';" class="{{ 'active-mode' if active_mode == 'single' else '' }}">Analizează o Foaie</button>
+            <button id="showBatchMode" onclick="window.location.href='{{ url_for('main_route', mode='batch') }}';" class="{{ 'active-mode' if active_mode == 'batch' else '' }}">Analizează Lot Foi</button>
+            <button id="showKeysMode" onclick="window.location.href='{{ url_for('main_route', mode='keys') }}';" class="{{ 'active-mode' if active_mode == 'keys' else '' }}">Gestionează Șabloane</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <ul class="flash-messages">
+                {% for category, message in messages %}
+                    {% if not ((category == 'error' or category == 'success') and (active_mode == 'keys' or form_action_error_on_keys)) %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div id="singleScanSection" class="content-section {{ 'active' if active_mode == 'single' else '' }}">
+            <div class="container">
+                <h1>Analizează o singură foaie de examen</h1>
+                {% if single_scan_step == 1 %}
+                    <h2>Pasul 1: Introduceți ID-ul Studentului</h2>
+                    <form method="POST" action="{{ url_for('main_route') }}">
+                        <input type="hidden" name="form_action" value="single_scan_step_1">
+                        <input type="hidden" name="active_mode_on_submit" value="single">
+                        <label for="student_id_input">ID Student:</label>
+                        <input type="text" id="student_id_input" name="student_id_input" value="{{ single_scan_student_id or '' }}" required>
+                        <button type="submit">Următorul</button>
+                    </form>
+                {% elif single_scan_step == 2 %}
+                    <h2>Pasul 2: Selectați Șablonul de Răspuns</h2>
+                    <div class="step-info"><p><strong>ID Student:</strong> {{ single_scan_student_id }}</p></div>
+                    <form method="POST" action="{{ url_for('main_route') }}">
+                        <input type="hidden" name="form_action" value="single_scan_step_2">
+                        <input type="hidden" name="active_mode_on_submit" value="single">
+                        <label for="answer_key_select_single">Selectează Șablonul de Răspuns:</label>
+                        <select id="answer_key_select_single" name="answer_key_select_single" required>
+                            {% for key in answer_keys %}
+                                <option value="{{ key }}" {% if key == single_scan_selected_key %}selected{% endif %}>{{ key }}</option>
+                            {% endfor %}
+                            {% if not answer_keys %}<option value="" disabled>Nu sunt șabloane disponibile</option>{% endif %}
+                        </select>
+                        <button type="submit" {% if not answer_keys %}disabled{% endif %}>Următorul</button>
+                        <button type="button" onclick="resetSingleScanViaPost();" class="secondary">Resetează</button>
+                    </form>
+                {% elif single_scan_step == 3 %}
+                    <h2>Pasul 3: Încărcați Foaia de Examen</h2>
+                    <div class="step-info">
+                        <p><strong>ID Student:</strong> {{ single_scan_student_id }}</p>
+                        <p><strong>Șablon de Răspuns:</strong> {{ single_scan_selected_key }}</p>
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('main_route') }}">
+                        <input type="hidden" name="form_action" value="single_scan_step_3">
+                        <input type="hidden" name="active_mode_on_submit" value="single">
+                        <label for="exam_image_single">Încărcați Foaia de Examen:</label>
+                        <input type="file" id="exam_image_single" name="exam_image" accept="image/png, image/jpeg, image/bmp, image/tiff" required>
+                        <button type="submit">Analizați Examenul</button>
+                        <button type="button" onclick="resetSingleScanViaPost();" class="secondary">Resetează</button>
+                    </form>
+                {% elif single_scan_step == 4 and single_scan_results_data %}
+                    <div class="analysis-results">
+                        <h2>Rezultatele Analizei</h2>
+                        <p><strong>ID Student (Introdus):</strong> {{ single_scan_results_data.input_student_id }}</p>
+                        {% if single_scan_results_data.student_id != single_scan_results_data.input_student_id %}
+                                <p><strong>ID Student (Detectat pe Foaie):</strong> {{ single_scan_results_data.student_id }}</p>
+                        {% endif %}
+                        <p><strong>Șablon de Răspuns Utilizat:</strong> {{ single_scan_results_data.selected_answer_key }}</p>
+                        <div class="grade-container">
+                            <h3>Notă: {{ "%.2f"|format(single_scan_results_data.grade|float) if single_scan_results_data.grade is not none else 'N/A' }} / 10</h3>
+                            {% if verificare_umana %}
+                                <button onclick="sendSingleExamToNocoDB()" class="success">Trimite la NocoDB & Drive</button>
+                            {% else %}
+                                <p style="margin-left: 15px;"><em>Verificarea umană este necesară pentru a salva rezultatele.</em></p>
+                            {% endif %}
+                        </div>
+                        <div class="submission-section">
+                                <div id="single_exam_submission_status" class="submission-status" style="display:none;"></div>
+                                <div id="single_exam_drive_link_container" style="display: none; margin-top:10px;">
+                                    <a id="single_exam_drive_link" href="#" target="_blank" class="drive-link"></a>
+                                </div>
+                                <div id="singleItemProgressContainer" style="display:none;">
+                                    <h3>Procesare finalizare (ID: <span id="singleItemBatchIdValue"></span>)</h3>
+                                    <progress id="singleItemProgressBar" value="0" max="1"></progress>
+                                    <p><span id="singleItemProgressText">0</span> / <span id="singleItemTotalItemsText">1</span></p>
+                                    <p id="singleItemCompleteMessage" style="display:none; color: green; font-weight: bold;"></p>
+                                </div>
+                        </div>
+                        <h3 onclick="toggleExpandableTable(this, 'singleAnswersTable')" class="expandable-header">Răspunsuri Detectate</h3>
+                        <table id="singleAnswersTable" style="display:none;">
+                            <thead><tr><th>Întrebare</th><th>Răspuns Detectat</th></tr></thead>
+                            <tbody>
+                            {% if single_scan_results_data.answers %}
+                                {% for q, ans in single_scan_results_data.answers.items()|sort(attribute='0') %}
+                                <tr><td>{{ q }}</td><td>{{ ans }}</td></tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="2">Niciun răspuns detectat.</td></tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+                        {% if single_scan_results_data.csv_filename %}
+                            <p style="margin-top:15px;"><a href="{{ url_for('download_csv_route', filename=single_scan_results_data.csv_filename) }}" class="drive-link" download>Descarcă CSV</a></p>
+                        {% endif %}
+                        
+                        {% if single_scan_results_data.annotated_img_web_path %} <h3 onclick="toggleExpandableTable(this, 'singleAnnotatedImageContainer')" class="expandable-header expanded" style="margin-top:15px;">Imagine Adnotată</h3>
+                            <div id="singleAnnotatedImageContainer" style="display:block;">
+                                <img src="{{ url_for('static', filename=single_scan_results_data.annotated_img_web_path) }}?t={{ range(1, 10000)|random }}" alt="Foaie Examen Adnotată" class="annotated-image"> </div>
+                        {% else %}
+                            <p style="margin-top:15px;"><em>Nicio imagine adnotată.</em></p>
+                        {% endif %}
+                        <hr style="margin-top:20px; margin-bottom:20px;">
+                        <a href="#" onclick="event.preventDefault(); resetSingleScanViaPost();" class="button-like">Analizează Altă Foaie</a>
+                    </div>
+                {% else %}
+                     <p>Începeți prin a introduce un ID de student sau <a href="#" onclick="event.preventDefault(); resetSingleScanViaPost();">resetați</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="batchModeSection" class="content-section {{ 'active' if active_mode == 'batch' else '' }}">
+            <div class="container">
+                <h1>Procesare Lot Examene</h1>
+                
+                <h2>Pasul 1: Încărcați Foile de Examen</h2>
+                <p>Selectați una sau mai multe imagini (png, jpg, jpeg, bmp, tiff). Acestea vor fi adăugate în folderul de procesare.</p>
+                <form action="{{ url_for('upload_batch_files_route') }}" method="post" enctype="multipart/form-data">
+                    <div>
+                        <label for="batch_files_upload">Selectați fișierele:</label>
+                        <input type="file" id="batch_files_upload" name="batch_files" multiple required 
+                               accept="image/png, image/jpeg, image/bmp, image/tiff" onchange="updateFileCount()">
+                        <span id="file_count_display" style="margin-left: 15px; color: #555;"></span>
+                    </div>
+                    <button type="submit">Încarcă Fișiere</button>
+                </form>
+
+                <hr style="margin-top: 25px; margin-bottom: 25px;">
+
+                <h2>Pasul 2: Analizați Lotul</h2>
+                <p>Această acțiune va procesa <strong>toate</strong> fișierele din folderul '{{ UPLOAD_FOLDER_NAME }}'.</p>
+                <form id="batch-analysis-initiate-form" action="{{ url_for('main_route') }}" method="post">
+                    <input type="hidden" name="form_action" value="initiate_batch_analysis">
+                    <input type="hidden" name="active_mode_on_submit" value="batch">
+                    <label for="answer_key_batch_select">Selectează Șablonul de Răspuns pentru Lot:</label>
+                    <select id="answer_key_batch_select" name="answer_key_batch_select">
+                        {% for key in answer_keys %}
+                            <option value="{{ key }}" {% if key == selected_answer_key_batch %}selected{% endif %}>{{ key }}</option>
+                        {% endfor %}
+                        {% if not answer_keys %}<option value="" disabled>Niciun șablon disponibil.</option>{% endif %}
+                    </select>
+                    <button type="submit" id="analyze_all_button" {% if not answer_keys %}disabled{% endif %}>Analizează Toate Fișierele</button>
+                </form>
+
+                <div id="batchProgressContainer" class="container" style="display:none; margin-top: 20px; background-color: #f0f8ff;">
+                    <h3>Procesare Lot Aprobare (ID: <span id="batchProcessIdValue"></span>)</h3>
+                    <progress id="batchProgressBar" value="0" max="100" style="width:100%; height: 25px;"></progress>
+                    <p><span id="batchProgressText">0</span> / <span id="batchTotalItemsText">0</span> elemente procesate.</p>
+                    <p id="batchCompleteMessage" style="display:none; color: green; font-weight: bold;">Procesare lot finalizată!</p>
+                    <div id="batchFailedFilesContainer" style="margin-top: 15px;">
+                        <h4>Detalii fișiere cu erori (dacă există):</h4>
+                        <ul id="batchFailedFilesList"></ul>
+                    </div>
+                </div>
+
+
+                {% if batch_results_for_display %}
+                    <div class="batch-results analysis-results">
+                        <h2>Rezultate Analiză Lot {% if pending_batch_verification_data_exists and verificare_umana %}(Verificare în Așteptare){% endif %}</h2>
+                        {% if pending_batch_verification_data_exists and verificare_umana %}
+                            <p>Revizuiți rezultatele. Aprobați pentru a salva în NocoDB/Drive (procesare în fundal).</p>
+                        {% elif not verificare_umana and batch_results_for_display %}
+                            <p>Verificare dezactivată. Rezultatele procesate local.</p>
+                        {% elif not pending_batch_verification_data_exists and batch_results_for_display %}
+                             <p>Analiza lotului completă. {% if verificare_umana %}Niciun element nu necesită verificare.{% else %}Verificarea a fost dezactivată.{% endif %}</p>
+                        {% endif %}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Student</th><th>Notă</th><th>Status Local</th><th>Previzualizare (Local)</th>
+                                    <th>Șablon</th><th>Fișier Original</th>
+                                    {% if verificare_umana %}<th>Acțiuni</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for result in batch_results_for_display %}
+                                <tr id="batch-item-row-{{ loop.index0 }}">
+                                    <td>{{ result.student_id }}</td>
+                                    <td>{{ "%.2f"|format(result.grade|float) if result.grade is not none else 'N/A' }}</td>
+                                    <td>{{ result.status }}</td>
+                                    <td>
+                                        {% if result.web_annotated_image_path %}
+                                            <a href="{{ url_for('static', filename=result.web_annotated_image_path) }}?t={{ range(1,10000)|random }}" target="_blank" class="drive-link">Vezi Imagine</a>
+                                        {% elif result.status == 'Annot. Img Missing' %} Imagine Lipsă
+                                        {% else %} N/A {% endif %}
+                                    </td>
+                                    <td>{{ result.answer_key_used }}</td>
+                                    <td>{{ result.original_filename }}</td>
+                                    {% if verificare_umana %}
+                                    <td style="text-align: center;">
+                                        {% if "Ready for Verification" in result.status %}
+                                        <button class="danger" style="padding: 6px 12px; font-size: 0.9em; margin: 2px; display: inline-flex; align-items: center; gap: 5px;"
+                                                title="Elimină acest examen din lotul curent de verificare."
+                                                onclick="confirmDiscardBatchItem('{{ result.original_filename }}', '{{ result.student_id }}', 'batch-item-row-{{ loop.index0 }}')">
+                                            <span style="font-size: 1.1em;">&#128465;</span> Elimină
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {% if pending_batch_verification_data_exists and verificare_umana %}
+                            <form id="verifyBatchForm" action="{{ url_for('verify_batch_action_route') }}" method="post" class="batch-verification-buttons">
+                                <input type="hidden" name="active_mode_on_submit" value="batch">
+                                <button type="submit" name="action" value="approve" class="success">Aprobă Lotul Rămas & Finalizează</button>
+                                <button type="submit" name="action" value="reject" class="danger">Respinge Lotul Rămas & Șterge Local</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% elif request.form.get('form_action') == 'initiate_batch_analysis' and not batch_results_for_display %}
+                    <p>Niciun rezultat. Verificați directorul '{{ UPLOAD_FOLDER_NAME }}' și logurile.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="keysSection" class="content-section {{ 'active' if active_mode == 'keys' else '' }}">
+             <div class="container">
+                <h1>Gestionare Șabloane Răspunsuri</h1>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages and (active_mode == 'keys' or form_action_error_on_keys) %}
+                    <ul class="flash-messages">
+                        {% for category, message in messages %}
+                            {% if category == 'error' or category == 'success' %}
+                                <li class="{{ category }}">{{ message }}</li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                {% endwith %}
+
+                {% if session.user_role == 'admin' %}
+                <div id="manage-key-form-container">
+                    <h2 id="manage-key-header">Creează șablon nou</h2>
+                    <form method="POST" action="{{ url_for('main_route') }}" id="manage-key-form">
+                        <input type="hidden" name="form_action" value="manage_answer_key">
+                        <input type="hidden" name="active_mode_on_submit" value="keys">
+                        <div id="edit-mode-fields"></div>
+                        <div><label for="key_name_manage">Numele șablonului:</label><input type="text" id="key_name_manage" name="key_name_manage" required></div>
+                        <div><label for="answers_string_manage">Răspunsuri corecte (format: A01:B; A02:C; ...):</label><textarea id="answers_string_manage" name="answers_string_manage" rows="10" placeholder="Ex: A01:A; A02:B; ... B01:C; ... C15:D"></textarea></div>
+                        <button type="submit" id="save-key-button">Salvează Șablonul</button>
+                        <button type="button" id="cancel-edit-button" class="secondary" style="display: none;" onclick="cancelEdit()">Anulează Editarea</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <h2>Șabloane curente</h2>
+                {% if answer_keys_data_for_view %}
+                    <div class="analysis-results">
+                        <table style="font-size: 0.9em;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">Nume Șablon</th>
+                                    <th>Răspunsuri Corecte</th>
+                                    {% if session.user_role == 'admin' %}<th style="width: 10%;">Acțiuni</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key_name, answers_list in answer_keys_data_for_view.items()|sort %}
+                                <tr>
+                                    <td><strong>{{ key_name }}</strong></td>
+                                    <td>
+                                        {% for q_num, ans_list in answers_list %}
+                                            <span class="answer-pair">{{ q_num }}: {{ ans_list|join(',') }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    {% if session.user_role == 'admin' %}
+                                    <td>
+                                        <button class="secondary" style="padding: 5px 10px; font-size: 0.9em;" onclick="populateEditForm('{{ key_name }}')">Editează</button>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>Niciun șablon găsit.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const allAnswerKeysData = {{ answer_keys_for_js|tojson }};
+
+        function showInitialMode() {
+            const activeMode = "{{ active_mode|default('single', true) }}";
+            document.getElementById('singleScanSection').style.display = 'none';
+            document.getElementById('batchModeSection').style.display = 'none';
+            const keysSection = document.getElementById('keysSection');
+            if (keysSection) { keysSection.style.display = 'none';}
+            if (activeMode === 'single') { document.getElementById('singleScanSection').style.display = 'block';
+            } else if (activeMode === 'batch') { document.getElementById('batchModeSection').style.display = 'block';
+            } else if (activeMode === 'keys' && keysSection) { keysSection.style.display = 'block';
+            } else { document.getElementById('singleScanSection').style.display = 'block';}
+        }
+        function toggleExpandableTable(headerElement, contentId) {
+            var content = document.getElementById(contentId);
+            var isImageContainer = contentId === 'singleAnnotatedImageContainer';
+            var displayStyle = isImageContainer ? 'block' : 'table';
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = displayStyle; headerElement.classList.add('expanded');
+            } else { content.style.display = 'none'; headerElement.classList.remove('expanded'); }
+        }
+        function sendSingleExamToNocoDB() {
+            {% if active_mode == 'single' and single_scan_step == 4 and single_scan_results_data and verificare_umana %}
+            const results = {{ single_scan_results_data|tojson }};
+            if (!results.input_student_id || results.grade === null || !results.answers || Object.keys(results.answers).length === 0 || !results.local_annotated_image_full_path) {
+                alert('Lipsesc date pentru trimitere. Verificați rezultatele.'); return;
+            }
+            const statusEl = document.getElementById('single_exam_submission_status');
+            const driveLinkContainerEl = document.getElementById('single_exam_drive_link_container');
+            const sendButton = document.querySelector('#singleScanSection .grade-container button.success');
+            statusEl.textContent = 'Status: Se trimite...'; statusEl.className = 'submission-status warning'; statusEl.style.display = 'block';
+            driveLinkContainerEl.style.display = 'none'; if(sendButton) sendButton.disabled = true;
+
+            fetch("{{ url_for('send_single_exam_to_nocodb_route') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}' },
+                body: JSON.stringify({
+                    student_id: results.input_student_id, grade: results.grade, answers: results.answers,
+                    original_uploaded_filename_for_cleanup: results.original_uploaded_filename_for_cleanup,
+                    local_annotated_image_full_path: results.local_annotated_image_full_path,
+                    local_csv_full_path: results.local_csv_full_path,
+                    answer_key_used: results.selected_answer_key, csv_filename: results.csv_filename
+                })
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(dataObj => {
+                const data = dataObj.body; statusEl.textContent = 'Status: ' + data.message;
+                if (dataObj.status === 202 && data.success) {
+                    statusEl.classList.remove('warning', 'error'); statusEl.classList.add('success');
+                    let progressContainer = document.getElementById('singleItemProgressContainer');
+                    if (progressContainer && data.batch_processing_id && data.total_items) {
+                        document.getElementById('singleItemBatchIdValue').textContent = data.batch_processing_id;
+                        document.getElementById('singleItemProgressBar').max = data.total_items;
+                        document.getElementById('singleItemTotalItemsText').textContent = data.total_items;
+                        progressContainer.style.display = 'block';
+                        updateBatchProgress(data.batch_processing_id, data.total_items, 'singleItem');
+                    }
+                    if(sendButton) sendButton.style.display = 'none';
+                } else {
+                    statusEl.classList.remove('success', 'warning'); statusEl.classList.add(dataObj.status === 403 ? 'warning' : 'error');
+                    if(sendButton) sendButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                statusEl.textContent = 'Status: Eroare Rețea - ' + error.message; statusEl.className = 'submission-status error';
+                if(sendButton) sendButton.disabled = false;
+            });
+            {% else %}
+            alert('Nu se poate trimite: Date incomplete, verificare dezactivată sau mod incorect.');
+            {% endif %}
+        }
+
+        function confirmDiscardBatchItem(originalFilename, studentId, rowId) {
+             if (confirm(`Sunteți sigur că eliminați examenul (${studentId} - ${originalFilename})? Acesta va fi scos din lotul de verificare.`)) {
+                 discardSingleBatchItem(originalFilename, studentId, rowId);
+             }
+        }
+        function discardSingleBatchItem(originalFilename, studentId, rowId) {
+            const btn = document.querySelector(`#${rowId} button.danger`); if(btn) {btn.disabled=true; btn.innerHTML='Se șterge&hellip;';}
+            fetch("{{ url_for('discard_single_batch_item_route') }}", {
+                method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'},
+                body: JSON.stringify({original_filename: originalFilename, student_id: studentId })
+            }).then(r => r.json().then(d => ({s:r.status, b:d}))).then(o => {
+                if (o.b.success) { window.location.reload(); }
+                else { alert('Eroare eliminare: '+(o.b.message||'Eroare server.')); if(btn){btn.disabled=false;btn.textContent='Elimină';}}
+            }).catch(e => { console.error('Eroare discard:', e); alert('Eroare rețea: '+e.message); if(btn){btn.disabled=false;btn.textContent='Elimină';}});
+        }
+        
+        function resetSingleScanViaPost() {
+            fetch("{{ url_for('reset_single_scan_flow') }}", {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    window.location.href = "{{ url_for('main_route', mode='single') }}";
+                } else {
+                    alert('Failed to reset single scan: ' + (data.message || 'Unknown error from server.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error during reset_single_scan POST request:', error);
+                alert('An error occurred while trying to reset the scan. Please check the console and try again.');
+            });
+        }
+
+        function populateEditForm(keyName) {
+            if (!allAnswerKeysData[keyName]) return;
+
+            const form = document.getElementById('manage-key-form');
+            const header = document.getElementById('manage-key-header');
+            const nameInput = document.getElementById('key_name_manage');
+            const answersInput = document.getElementById('answers_string_manage');
+            const editFieldsContainer = document.getElementById('edit-mode-fields');
+            const cancelButton = document.getElementById('cancel-edit-button');
+
+            header.textContent = `Editează Șablon: ${keyName}`;
+            nameInput.value = keyName;
+            answersInput.value = allAnswerKeysData[keyName];
+            
+            editFieldsContainer.innerHTML = `
+                <input type="hidden" name="is_update" value="true">
+                <input type="hidden" name="original_key_name" value="${keyName}">
+            `;
+
+            cancelButton.style.display = 'inline-block';
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            const form = document.getElementById('manage-key-form');
+            const header = document.getElementById('manage-key-header');
+            const editFieldsContainer = document.getElementById('edit-mode-fields');
+            const cancelButton = document.getElementById('cancel-edit-button');
+
+            header.textContent = 'Creează șablon nou';
+            form.reset();
+            editFieldsContainer.innerHTML = '';
+            cancelButton.style.display = 'none';
+        }
+
+        function updateFileCount() {
+            const fileInput = document.getElementById('batch_files_upload');
+            const countDisplay = document.getElementById('file_count_display');
+            const fileCount = fileInput.files.length;
+            if (fileCount > 0) {
+                countDisplay.textContent = `${fileCount} fișier(e) selectate.`;
+            } else {
+                countDisplay.textContent = '';
+            }
+        }
+
+        function updateBatchProgress(batchId, totalItems, uiPrefix = 'batch') {
+            const progressBar = document.getElementById(uiPrefix + 'ProgressBar');
+            const progressTextEl = document.getElementById(uiPrefix + 'ProgressText');
+            const completeMessageEl = document.getElementById(uiPrefix + 'CompleteMessage');
+            const progressContainerEl = document.getElementById(uiPrefix + 'ProgressContainer');
+            const totalItemsTextEl = document.getElementById(uiPrefix + 'TotalItemsText');
+
+            if (!progressBar || !progressTextEl || !completeMessageEl || !progressContainerEl || !totalItemsTextEl) {
+                console.error('One or more progress elements not found for UI prefix:', uiPrefix);
+                return;
+            }
+
+            progressContainerEl.style.display = 'block';
+            totalItemsTextEl.textContent = totalItems;
+            progressBar.max = totalItems;
+            progressBar.value = 0;
+            progressTextEl.textContent = "0";
+            completeMessageEl.style.display = 'none';
+
+            const intervalId = setInterval(() => {
+                fetch(`/batch_progress/${batchId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                console.warn(`Batch ID ${batchId} not found. Assuming completion or expiry.`);
+                                completeMessageEl.textContent = "Statusul procesării nu mai este disponibil (finalizat sau expirat).";
+                                completeMessageEl.style.color = 'orange';
+                                clearInterval(intervalId); return null;
+                            }
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data) return;
+
+                        if (data.error && data.error !== "Batch ID not found or expired") {
+                            console.error('Error fetching progress:', data.error, data.details || '');
+                            completeMessageEl.textContent = `Eroare progres: ${data.error}`;
+                            completeMessageEl.style.color = 'red';
+                            completeMessageEl.style.display = 'block';
+                            clearInterval(intervalId);
+                            return;
+                        }
+
+                        progressBar.value = data.processed;
+                        progressTextEl.textContent = data.processed;
+
+                        if (data.is_complete || data.processed >= data.total) {
+                            clearInterval(intervalId);
+                            progressBar.value = data.total;
+                            progressTextEl.textContent = data.total;
+                            completeMessageEl.textContent = "Procesare finalizată!";
+                            completeMessageEl.style.color = 'green';
+                            completeMessageEl.style.display = 'block';
+
+                            setTimeout(() => {
+                                fetch("{{ url_for('clear_batch_progress_session_route') }}", {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}' }
+                                }).then(response => {
+                                    if(response.ok) console.log("Batch progress session variables cleared.");
+                                    else console.error("Failed to clear batch progress session variables.");
+                                }).catch(err => console.error("Error clearing session progress vars:", err));
+                            }, 7000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Network or other error fetching batch progress:', error);
+                    });
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            showInitialMode();
+
+            const batchIdFromSession = "{{ session.get('last_batch_processing_id', '') }}";
+            const totalItemsFromSession = parseInt("{{ session.get('last_batch_total_items', 0) }}", 10);
+
+            const batchProgressBar = document.getElementById('batchProgressBar');
+            const batchProgressContainer = document.getElementById('batchProgressContainer');
+
+            if (batchIdFromSession && totalItemsFromSession > 0 && batchProgressBar && batchProgressContainer) {
+                if (parseInt(batchProgressBar.value, 10) < totalItemsFromSession) {
+                    batchProgressContainer.style.display = 'block';
+                    updateBatchProgress(batchIdFromSession, totalItemsFromSession, 'batch');
+                } else if (parseInt(batchProgressBar.value, 10) >= totalItemsFromSession) {
+                    const completeMsg = document.getElementById('batchCompleteMessage');
+                    if(completeMsg) {
+                        completeMsg.textContent = "Procesare lot finalizată!";
+                        completeMsg.style.display = 'block';
+                        completeMsg.style.color = 'green';
+                    }
+                }
+            }
+            
+            const singleItemBatchIdFromSession = "{{ session.get('last_single_item_processing_id', session.get('last_batch_processing_id', '')) }}";
+            const singleItemTotalFromSession = parseInt("{{ session.get('last_single_item_total_items', session.get('last_batch_total_items', 0)) }}", 10);
+
+            const singleItemProgressBar = document.getElementById('singleItemProgressBar');
+            const singleItemProgressContainer = document.getElementById('singleItemProgressContainer');
+        });
+    </script>
+</body>
+</html>
